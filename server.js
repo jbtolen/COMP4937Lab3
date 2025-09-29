@@ -1,8 +1,8 @@
 // Import required Node.js modules
-const http = require("http");   // for creating the HTTP server
-const url = require("url");     // for parsing request URLs
-const fs = require("fs");       // for reading/writing files
-const path = require("path");   // for handling file paths
+const http = require("http");
+const url = require("url");
+const fs = require("fs");
+const path = require("path");
 const Utils = require("./modules/utils");  // custom utility module
 
 class MyServer {
@@ -21,7 +21,7 @@ class MyServer {
 
     start() {
         this.server.listen(this.port, this.hostname, () => {
-            console.log(`Server running at http://localhost:${this.port}/`);
+            console.log(`Server running at http://${this.hostname}:${this.port}/`);
         });
     }
 
@@ -47,13 +47,10 @@ class MyServer {
         }
     }
 
-    // ===== Home Page =====
     handleHome(res) {
         const html = `
         <html>
-        <head>
-            <title>Greeting & File Page</title>
-        </head>
+        <head><title>Greeting & File Page</title></head>
         <body>
             <h2>Greeting Form</h2>
             <form action="/COMP4537/labs/3/getDate" method="GET">
@@ -77,96 +74,69 @@ class MyServer {
         res.end(html);
     }
 
-    // ===== Get Date =====
     handleGetDate(query, res) {
         const name = query.name;
         if (!name) {
             res.writeHead(400, { "Content-Type": "text/html" });
-            res.end(`
-                <p style="color:red;">Error: Name is required in query string (?name=YourName)</p>
-                <br><button onclick="window.location.href='/'">⬅ Back</button>
-            `);
+            res.end(`<p style="color:red;">Error: Name is required</p>
+                     <br><button onclick="window.location.href='/'">⬅ Back</button>`);
             return;
         }
 
         res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(`
-            ${Utils.getDate(name)}
-            <br><br>
-            <button onclick="window.location.href='/'">⬅ Back</button>
-        `);
+        res.end(`${Utils.getDate(name)}<br><br><button onclick="window.location.href='/'">⬅ Back</button>`);
     }
 
-    // ===== Write File =====
     handleWriteFile(query, res) {
         const text = query.text;
         if (!text) {
             res.writeHead(400, { "Content-Type": "text/html" });
-            res.end(`
-                <p style="color:red;">Error: Query string ?text= is required</p>
-                <br><button onclick="window.location.href='/'">⬅ Back</button>
-            `);
+            res.end(`<p style="color:red;">Error: Text is required</p>
+                     <br><button onclick="window.location.href='/'">⬅ Back</button>`);
             return;
         }
 
         const filePath = path.join(this.dataDir, "file.txt");
-
         fs.appendFile(filePath, text + "\n", (err) => {
             if (err) {
                 res.writeHead(500, { "Content-Type": "text/html" });
-                res.end(`
-                    <p style="color:red;">Error writing to file: ${err.message}</p>
-                    <br><button onclick="window.location.href='/'">⬅ Back</button>
-                `);
+                res.end(`<p style="color:red;">Error writing file: ${err.message}</p>
+                         <br><button onclick="window.location.href='/'">⬅ Back</button>`);
             } else {
                 res.writeHead(200, { "Content-Type": "text/html" });
-                res.end(`
-                    <p style="color:blue;">Successfully appended "${text}" to file.txt</p>
-                    <br><button onclick="window.location.href='/'">⬅ Back</button>
-                `);
+                res.end(`<p style="color:blue;">Appended "${text}" to file.txt</p>
+                         <br><button onclick="window.location.href='/'">⬅ Back</button>`);
             }
         });
     }
 
-    // ===== Read File =====
     handleReadFile(fileName, res) {
         const filePath = path.join(this.dataDir, fileName);
-
         fs.readFile(filePath, "utf8", (err, data) => {
             if (err) {
-                if (err.code === "ENOENT") {
-                    res.writeHead(404, { "Content-Type": "text/html" });
-                    res.end(`
-                        <p style="color:red;">404: File "${fileName}" not found</p>
-                        <br><button onclick="window.location.href='/'">⬅ Back</button>
-                    `);
-                } else {
-                    res.writeHead(500, { "Content-Type": "text/html" });
-                    res.end(`
-                        <p style="color:red;">Error reading file: ${err.message}</p>
-                        <br><button onclick="window.location.href='/'">⬅ Back</button>
-                    `);
-                }
+                const code = err.code === "ENOENT" ? 404 : 500;
+                const msg = err.code === "ENOENT" ? `File "${fileName}" not found` : err.message;
+                res.writeHead(code, { "Content-Type": "text/html" });
+                res.end(`<p style="color:red;">Error: ${msg}</p>
+                         <br><button onclick="window.location.href='/'">⬅ Back</button>`);
             } else {
                 res.writeHead(200, { "Content-Type": "text/html" });
-                res.end(`
-                    <pre style="color:blue;">${data}</pre>
-                    <br><button onclick="window.location.href='/'">⬅ Back</button>
-                `);
+                res.end(`<pre style="color:blue;">${data}</pre>
+                         <br><button onclick="window.location.href='/'">⬅ Back</button>`);
             }
         });
     }
 
-    // ===== 404 =====
     send404(res) {
         res.writeHead(404, { "Content-Type": "text/html" });
-        res.end(`
-            <p style="color:red;">404 Not Found</p>
-            <br><button onclick="window.location.href='/'">⬅ Back</button>
-        `);
+        res.end(`<p style="color:red;">404 Not Found</p>
+                 <br><button onclick="window.location.href='/'">⬅ Back</button>`);
     }
 }
 
-// Start server
-const server = new MyServer();
+// ===== Start server =====
+const PORT = process.env.PORT || 3000; // Render will assign PORT
+const HOST = "0.0.0.0";                // Bind to all network interfaces
+
+const server = new MyServer(HOST, PORT);
 server.start();
